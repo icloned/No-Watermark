@@ -18,7 +18,8 @@
 - 豆包 
 
 ## 安装方法
-
+下载 No-Watermark-main.crx 文件安装
+或
 1. 下载此仓库的所有文件到本地文件夹
 2. 打开Chrome浏览器，进入扩展程序页面 (chrome://extensions/)
 3. 开启右上角的「开发者模式」
