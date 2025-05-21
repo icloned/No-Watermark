@@ -1,0 +1,52 @@
+.shuiyin-download-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: auto;
+}
+
+.shuiyin-download-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  font-family: Arial, sans-serif;
+}
+
+.shuiyin-download-button:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+/* 当鼠标悬停在图片容器上时显示下载按钮 */
+*:hover > .shuiyin-download-container,
+.shuiyin-download-container:hover {
+  opacity: 1;
+}
+
+/* 适配不同网站的图片容器 */
+img.preview-img-sccBk_,
+img[data-testid="in_painting_picture"],
+img.image-DU6JLr {
+  position: relative;
+}
+
+/* 确保图片容器是相对定位，以便正确放置下载按钮 */
+.preview-img-sccBk_,
+[data-testid="in_painting_picture"],
+.image-DU6JLr {
+  position: relative !important;
+}
+
+/* 防止按钮被其他元素遮挡 */
+.shuiyin-download-container * {
+  pointer-events: auto !important;
+}
