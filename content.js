@@ -117,7 +117,6 @@ function downloadImageWithoutWatermark(img, siteId) { // siteId is available if 
   
   // 添加必要的请求头
   xhr.setRequestHeader('Accept', 'image/webp,image/apng,image/*,*/*;q=0.8');
-  xhr.setRequestHeader('Referer', window.location.href);
   
   xhr.onload = function() {
     if (xhr.status === 200) {
