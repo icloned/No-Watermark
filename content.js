@@ -1,34 +1,48 @@
 // 无水印下载器 - 内容脚本
 
+const siteConfigs = [
+  {
+    id: 'jimeng',
+    matchesHostname: ['jimeng.jianying.com'],
+    selectors: ['img.preview-img-sccBk_', 'img[data-testid="in_painting_picture"]'],
+    // customWatermarkRemover: null // Example for future use
+  },
+  {
+    id: 'doubao',
+    matchesHostname: ['www.doubao.com'],
+    selectors: ['img.image-DU6JLr'],
+    // customWatermarkRemover: null // Example for future use
+  }
+];
+
+let currentSiteConfig = null;
+
 // 主函数
 function main() {
-  // 根据网站URL选择不同的处理方法
-  const currentURL = window.location.href;
+  const currentHostname = window.location.hostname;
   
-  if (currentURL.includes('jimeng.jianying.com')) {
-    handleJimengSite();
-  } else if (currentURL.includes('doubao.com')) {
-    handleDoubaoSite();
+  for (const config of siteConfigs) {
+    if (config.matchesHostname.some(hostname => currentHostname.includes(hostname))) {
+      currentSiteConfig = config;
+      processSite(config);
+      break; // Stop after finding the first match
+    }
   }
   
-  // 添加监听器以处理动态加载的内容
-  observeDOMChanges();
+  // Add listener for dynamically loaded content, only if a site is matched
+  if (currentSiteConfig) {
+    observeDOMChanges();
+  }
 }
 
-// 处理即梦网站的图片
-function handleJimengSite() {
-  const images = document.querySelectorAll('img.preview-img-sccBk_, img[data-testid="in_painting_picture"]');
-  processImages(images);
-}
-
-// 处理豆包网站的图片
-function handleDoubaoSite() {
-  const images = document.querySelectorAll('img.image-DU6JLr');
-  processImages(images);
+// Process images for a specific configured site
+function processSite(config) {
+  const images = document.querySelectorAll(config.selectors.join(', '));
+  processImages(images, config.id); // Pass siteId to processImages
 }
 
 // 处理找到的图片
-function processImages(images) {
+function processImages(images, siteId) { // siteId is needed for addDownloadButton
   images.forEach(img => {
     // 检查图片是否已经处理过
     if (img.getAttribute('data-processed') === 'true' || !img.src) return;
@@ -36,28 +50,28 @@ function processImages(images) {
     // 检查图片是否加载完成
     if (!img.complete) {
       img.onload = function() {
-        processImageSize(img);
+        processImageSize(img, siteId);
       };
     } else {
-      processImageSize(img);
+      processImageSize(img, siteId);
     }
   });
 }
 
 // 根据图片尺寸处理
-function processImageSize(img) {
+function processImageSize(img, siteId) { // siteId is needed for addDownloadButton
   // 检查图片宽度是否大于等于600px
   if (img.naturalWidth >= 600 || img.width >= 600 || img.offsetWidth >= 600) {
     // 标记图片已处理
     img.setAttribute('data-processed', 'true');
     
     // 创建下载按钮
-    addDownloadButton(img);
+    addDownloadButton(img, siteId);
   }
 }
 
 // 添加下载按钮
-function addDownloadButton(img) {
+function addDownloadButton(img, siteId) { // siteId is needed for downloadImageWithoutWatermark
   // 创建按钮容器
   const buttonContainer = document.createElement('div');
   buttonContainer.className = 'shuiyin-download-container';
@@ -72,7 +86,7 @@ function addDownloadButton(img) {
   downloadButton.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    downloadImageWithoutWatermark(img);
+    downloadImageWithoutWatermark(img, siteId); // Pass siteId
   });
   
   // 将按钮添加到容器
@@ -87,13 +101,13 @@ function addDownloadButton(img) {
 }
 
 // 下载无水印图片
-function downloadImageWithoutWatermark(img) {
+function downloadImageWithoutWatermark(img, siteId) { // siteId is available if needed by removeWatermarkParams
   // 获取原始图片URL
   let originalUrl = img.src;
   console.log('原始图片URL:', originalUrl);
   
-  // 移除水印参数
-  let cleanUrl = removeWatermarkParams(originalUrl);
+  // 移除水印参数 - pass siteId if removeWatermarkParams is adapted to use it
+  let cleanUrl = removeWatermarkParams(originalUrl, siteId);
   console.log('处理后的URL:', cleanUrl);
   
   // 使用XMLHttpRequest获取图片
@@ -111,16 +125,16 @@ function downloadImageWithoutWatermark(img) {
       const blob = xhr.response;
       
       // 创建图片对象
-      const img = new Image();
-      img.onload = function() {
+      const imgElementForCanvas = new Image(); // Renamed to avoid conflict with function parameter 'img'
+      imgElementForCanvas.onload = function() {
         // 创建canvas
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = imgElementForCanvas.width;
+        canvas.height = imgElementForCanvas.height;
         
         // 在canvas上绘制图片
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(imgElementForCanvas, 0, 0);
         
         // 将canvas转换为jpeg格式的blob
         canvas.toBlob(function(jpegBlob) {
@@ -144,31 +158,47 @@ function downloadImageWithoutWatermark(img) {
       };
       
       // 设置图片源
-      img.src = window.URL.createObjectURL(blob);
+      imgElementForCanvas.src = window.URL.createObjectURL(blob);
     } else {
       console.error('获取图片失败:', xhr.status);
-      alert('获取图片失败，请稍后重试');
+      alert('Download failed: Could not retrieve image (Status: ' + xhr.status + '). The image may be protected or the URL is incorrect.');
     }
   };
   
   xhr.onerror = function() {
     console.error('请求失败');
-    alert('请求失败，请检查网络连接');
+    alert('Download failed: Could not fetch image. Please check your network connection or try again later.');
   };
   
   xhr.send();
 }
 
 // 移除水印参数
-function removeWatermarkParams(url) {
+// siteId is passed but not strictly used in this version for internal logic,
+// but demonstrates how it would be available if specific rules per siteId were needed.
+function removeWatermarkParams(url, siteId) {
+  // If a custom remover is defined for the site, use it.
+  // This requires currentSiteConfig to be accessible or siteId to be used to find the config.
+  // For simplicity in this step, we assume currentSiteConfig is accessible if needed,
+  // or that siteId could be used to look up a custom function in siteConfigs.
+  // const config = siteConfigs.find(c => c.id === siteId);
+  // if (config && config.customWatermarkRemover) {
+  //   return config.customWatermarkRemover(url);
+  // }
+
   try {
-    // 处理即梦网站图片URL
-    if (url.includes('imagex-sign.byteimg.com')) {
+    // Generic handling based on URL patterns, which covers current sites.
+    // This part remains similar to before, as it's host-based.
+    // If siteId were used, these conditions could be:
+    // if (siteId === 'jimeng' && url.includes('imagex-sign.byteimg.com')) { ... }
+    // else if (siteId === 'doubao' && url.includes('dreamina-sign.byteimg.com')) { ... }
+    // For now, the URL matching is sufficient.
+
+    if (url.includes('imagex-sign.byteimg.com') || url.includes('dreamina-sign.byteimg.com')) {
       const urlObj = new URL(url);
       const searchParams = urlObj.searchParams;
-      console.log('原始URL参数:', Object.fromEntries(searchParams.entries()));
+      // console.log('原始URL参数 (siteId:', siteId, '):', Object.fromEntries(searchParams.entries())); // Example logging with siteId
       
-      // 保留所有原始参数，但移除水印相关参数
       const newParams = new URLSearchParams();
       for (const [key, value] of searchParams.entries()) {
         if (!key.includes('watermark') && !key.includes('water')) {
@@ -176,37 +206,17 @@ function removeWatermarkParams(url) {
         }
       }
       
-      url = urlObj.origin + urlObj.pathname;
+      let newUrl = urlObj.origin + urlObj.pathname;
       if (newParams.toString()) {
-        url += '?' + newParams.toString();
+        newUrl += '?' + newParams.toString();
       }
-      console.log('处理后的URL参数:', newParams.toString());
+      // console.log('处理后的URL参数 (siteId:', siteId, '):', newParams.toString());
+      return newUrl;
     }
     
-    // 处理豆包网站图片URL
-    if (url.includes('dreamina-sign.byteimg.com')) {
-      const urlObj = new URL(url);
-      const searchParams = urlObj.searchParams;
-      console.log('原始URL参数:', Object.fromEntries(searchParams.entries()));
-      
-      // 保留所有原始参数，但移除水印相关参数
-      const newParams = new URLSearchParams();
-      for (const [key, value] of searchParams.entries()) {
-        if (!key.includes('watermark') && !key.includes('water')) {
-          newParams.append(key, value);
-        }
-      }
-      
-      url = urlObj.origin + urlObj.pathname;
-      if (newParams.toString()) {
-        url += '?' + newParams.toString();
-      }
-      console.log('处理后的URL参数:', newParams.toString());
-    }
-    
-    return url;
+    return url; // Return original URL if no specific pattern matches
   } catch (error) {
-    console.error('处理URL时出错:', error);
+    console.error('Error processing URL for watermark removal:', url, error);
     return url; // 如果处理失败，返回原始URL
   }
 }
@@ -216,19 +226,25 @@ function observeDOMChanges() {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.addedNodes.length) {
-        // 检查新添加的节点是否包含图片
         mutation.addedNodes.forEach((node) => {
-          // 如果节点是元素节点
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // 如果节点是图片
+            let imagesToProcess = [];
             if (node.tagName === 'IMG') {
-              processImages([node]);
+              imagesToProcess.push(node);
             } else {
-              // 检查节点内的图片
-              const images = node.querySelectorAll('img');
-              if (images.length > 0) {
-                processImages(images);
+              // Query using the current site's selectors for broader new elements
+              // or stick to just finding 'img' tags if processImages is generic enough
+              const imgs = node.querySelectorAll('img'); // General approach
+              // If we wanted to be very specific to site selectors for dynamic content:
+              // const imgs = node.querySelectorAll(currentSiteConfig.selectors.join(','));
+              if (imgs.length > 0) {
+                imagesToProcess.push(...imgs);
               }
+            }
+            
+            if (imagesToProcess.length > 0 && currentSiteConfig) {
+              // Pass currentSiteConfig.id for context if needed by processImages
+              processImages(imagesToProcess, currentSiteConfig.id);
             }
           }
         });
@@ -236,7 +252,6 @@ function observeDOMChanges() {
     });
   });
   
-  // 配置观察器
   observer.observe(document.body, {
     childList: true,
     subtree: true

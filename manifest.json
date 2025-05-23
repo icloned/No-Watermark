@@ -5,8 +5,7 @@
   "description": "为AI生成的图片添加无水印下载按钮",
   "permissions": [
     "activeTab",
-    "downloads",
-    "webRequest"
+    "downloads"
   ],
   "host_permissions": [
     "*://*.byteimg.com/*",
