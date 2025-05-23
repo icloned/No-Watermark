@@ -60,8 +60,8 @@ function processImages(images, siteId) { // siteId is needed for addDownloadButt
 
 // 根据图片尺寸处理
 function processImageSize(img, siteId) { // siteId is needed for addDownloadButton
-  // 检查图片宽度是否大于等于600px
-  if (img.naturalWidth >= 600 || img.width >= 600 || img.offsetWidth >= 600) {
+  // 检查图片宽度是否大于等于800px
+  if (img.naturalWidth >= 800 || img.width >= 800 || img.offsetWidth >= 800) {
     // 标记图片已处理
     img.setAttribute('data-processed', 'true');
     
