@@ -60,6 +60,10 @@
 
 通过这种方式，可以相对容易地扩展插件功能以支持更多网站，而无需对核心逻辑进行大量修改。
 
+## Changelog
+- **v1.0.1 (Internal Update)**
+  - Fixed an issue where explicitly setting the 'Referer' header for image download requests was causing a console error. This header is no longer set, allowing the browser to handle it automatically, which resolves the error and maintains functionality.
+
 ## 注意事项
 
 - 本插件仅供学习和研究使用。
